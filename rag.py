@@ -9,16 +9,14 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
 
-
-INPUT_DATA_DIR = "markdown_docs"
-CHROMA_DB_DIR = "chroma_db"
-MODEL_NAME = "qwen2.5:7b"        
-EMBED_MODEL = "bge-m3"                 
+INPUT_DATA_DIR = "markdown_docs"  
+CHROMA_DB_DIR = "chroma_db"       
+MODEL_NAME = "qwen2.5:14b"        
 
 def build_vector_database():
     if not os.path.exists(INPUT_DATA_DIR):
         os.makedirs(INPUT_DATA_DIR, exist_ok=True)
-        print(f"Папку '{INPUT_DATA_DIR}' не знайдено. Створено порожню.")
+        print(f"[ПОПЕРЕДЖЕННЯ] Папку '{INPUT_DATA_DIR}' не знайдено. Створено порожню.")
         return None
 
     print(f"Зчитування Markdown-файлів з папки '{INPUT_DATA_DIR}'...")
@@ -36,18 +34,18 @@ def build_vector_database():
         return None
 
     print(f"Оброблено документів: {len(documents)}. Розбиття на чанки...")
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1500, chunk_overlap=300)
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
     chunks = text_splitter.split_documents(documents)
 
     print(f"Створення векторних ембеддінгів...")
-    embeddings = OllamaEmbeddings(model=EMBED_MODEL)
+    embeddings = OllamaEmbeddings(model=MODEL_NAME)
     
     print("Запис чанків у локальну базу ChromaDB...")
     vector_db = Chroma.from_documents(chunks, embeddings, persist_directory=CHROMA_DB_DIR)
     return vector_db
 
 def main():
-    embeddings = OllamaEmbeddings(model=EMBED_MODEL)
+    embeddings = OllamaEmbeddings(model=MODEL_NAME)
     
     if os.path.exists(CHROMA_DB_DIR) and os.listdir(CHROMA_DB_DIR):
         print("Знайдено готову векторну базу. Завантаження...")
@@ -58,7 +56,7 @@ def main():
         if not vector_db:
             return
 
-    retriever = vector_db.as_retriever(search_kwargs={"k": 6})
+    retriever = vector_db.as_retriever(search_kwargs={"k": 3})
 
     prompt = ChatPromptTemplate.from_template("""Ти — досвідчений та вимогливий викладач університету. 
 Твоє завдання — допомагати студентам засвоювати матеріал, спираючись ВИКЛЮЧНО на надані фрагменти тексту з підручників (Контекст).
